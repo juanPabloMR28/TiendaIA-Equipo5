@@ -1,1 +1,1 @@
-# Script de Prebas
+# Script de Pruebas
