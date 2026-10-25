@@ -1,0 +1,134 @@
+# TiendaIA - Laboratorio 2
+# Define todos los contenedores del sistema: 3 bases de datos, 4 microservicios
+# y el API Gateway.
+# Las contraseñas se leen del archivo .env.
+
+# Opciones comunes para los microservicios
+x-servicio: &servicio
+  restart: unless-stopped
+  build: &construir
+    context: .
+
+services:
+  # Bases de datos
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: tienda
+      MYSQL_USER: tienda
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 20
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  # Microservicios
+
+  clientes:
+    <<: *servicio
+    build:
+      <<: *construir
+      args:
+        SERVICIO: clientes
+    environment:
+      DATABASE_URL: "mysql+pymysql://tienda:${MYSQL_PASSWORD}@mysql:3306/tienda"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  productos:
+    <<: *servicio
+    build:
+      <<: *construir
+      args:
+        SERVICIO: productos
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  ventas:
+    <<: *servicio
+    build:
+      <<: *construir
+      args:
+        SERVICIO: ventas
+    environment:
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+      - clientes
+      - productos
+
+  ia:
+    <<: *servicio
+    build:
+      <<: *construir
+      args:
+        SERVICIO: ia_service
+    environment:
+      VENTAS_URL: http://ventas:8000
+      MODELO_PATH: /modelos/modelo.joblib
+    volumes:
+      - modelos:/modelos
+    depends_on:
+      - ventas
+
+  # Punto de entrada
+
+  gateway:
+    <<: *servicio
+    build:
+      <<: *construir
+      args:
+        SERVICIO: gateway
+    ports:
+      - "8080:8000"
+    environment:
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+    depends_on:
+      - clientes
+      - productos
+      - ventas
+      - ia
+
+  # Cliente web
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - "./frontend:/usr/share/nginx/html:ro"
+    ports:
+      - "8081:80"
+
+# Volúmenes persistentes
+
+volumes:
+  mysql_data:
+  mongo_data:
+  redis_data:
+  modelos:
