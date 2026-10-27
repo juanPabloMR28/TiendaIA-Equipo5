@@ -70,3 +70,38 @@ async def proxy (svc: str, req: Request, ruta: str = ""):
     cuerpo = await req.body()  # bytes del cuerpo (vacío en GET)
     
     # requests es BLOQUEANTE: si se llamara directamente, el gateway
+    try:
+        r = await run_in_threadpool(
+            sesion.request,
+            req.method,
+            destino,
+            params=req.query_params,
+            data=cuerpo,
+            headers={
+                k: v for k, v in req.headers.items()
+                if k.lower() not in ("host", "content-length")
+            },
+            timeout=TIEMPO_ESPERA,
+        )
+    except requests.RequestException as e:
+        return Response(
+            content=str(e),
+            status_code=502,
+            media_type="text/plain",
+        )
+
+    cabeceras = {
+        k: v for k, v in r.headers.items()
+        if k.lower() not in (
+            "content-encoding",
+            "transfer-encoding",
+            "content-length",
+            "connection",
+        )
+    }
+
+    return Response(
+        content=r.content,
+        status_code=r.status_code,
+        headers=cabeceras,
+    )

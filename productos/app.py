@@ -2,67 +2,79 @@
 Expone un CRUD de productos (nombre, precio, categoría) con FastAPI y guarda los
 datos en MongoDB, una base de datos de documentos (cada producto es un JSON).
 No llama a otros servicios: Ventas lo consulta por HTTP para obtener el precio y
-validar que el producto exista; el API Gateway le reenvía las peticiones externas."""
-
+validar que el producto exista; el API Gateway le reenvía las peticiones externas.
+"""
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from pymongo import MongoClient, ReturnDocument
-
-# --- Base de datos ---
+# ---------------------------------------------------------------- Base de datos
 # MONGO_URL llega por variable de entorno (p. ej. mongodb://mongo:27017, donde
 # "mongo" es el nombre del contenedor en docker-compose.yml).
-db = MongoClient(os.environ["MONGO_URL"])["tienda"]
 # ["tienda"] selecciona la base de datos; MongoDB la crea al primer uso.
-
-# Creación del índice único sobre "id" (Extensión de Productos)
+db = MongoClient(os.environ["MONGO_URL"])["tienda"]
+# Índice único sobre "id", creado una vez al arrancar el servicio.
+# - Velocidad: buscar/actualizar/borrar por id (find_one({"id": ...})) usa el
+#   índice (árbol B) en lugar de recorrer toda la colección (COLLSCAN).
+# - Integridad: MongoDB rechaza un segundo documento con el mismo id
+#   (DuplicateKeyError, código E11000), así nunca hay dos productos con el mismo id.
+# Es idempotente: si el índice ya existe con las mismas opciones, no hace nada.
 db.productos.create_index("id", unique=True)
-
 app = FastAPI(title="TiendaIA - Productos")
-
-# --- Modelo de entrada ---
-class ProductoIn (BaseModel):
+# ---------------------------------------------------------------- Modelo de entrada
+class ProductoIn(BaseModel):
     """Datos de un producto enviados en el cuerpo JSON.
-    Si no cumplen las reglas, FastAPI responde 422 automáticamente."""
+    Si no cumplen las reglas, FastAPI responde 422 automáticamente.
+    """
     nombre: str = Field(min_length=1, max_length=100)
     # Field(gt=0): "greater than 0", el precio debe ser estrictamente positivo
     precio: float = Field(gt=0)
-    categoria: str = "general"
-
+    categoria: str = "general" # valor por omisión si no se envía
+    
 def siguiente_id() -> int:
-    """Id entero autoincremental (MongoDB no lo tiene: usamos un contador)."""
+    """Id entero autoincremental (MongoDB no lo tiene: usamos un contador).
+    """
     # Documento contador {"_id": "productos", "valor": N} en la colección
     # "contadores". $inc suma 1 de forma ATÓMICA en el servidor: aunque lleguen
     # dos peticiones al mismo tiempo, nunca reciben el mismo id.
     # upsert=True crea el contador la primera vez; ReturnDocument.AFTER devuelve
     # el documento ya incrementado.
     doc = db.contadores.find_one_and_update(
-        {"_id": "productos"}, {"$inc": {"valor": 1}},
-        upsert=True, return_document=ReturnDocument.AFTER)
+    {"_id": "productos"}, {"$inc": {"valor": 1}},
+    upsert=True, return_document=ReturnDocument.AFTER)
     return doc["valor"]
 
-# --- Endpoints ---
+# ---------------------------------------------------------------- Endpoints
 @app.get("/health")
 def salud():
     """Verificación de salud usada por el gateway; responde 200."""
-    return {"servicio": "productos", "status": "ok"}
-
+    return {"servicio": "productos"
+    ,
+    "status": "ok"}
+    
 @app.get("/productos")
 def listar(categoria: str | None = None, precio_max: float | None = None):
-    """Devuelve los productos aplicando filtros opcionales de categoría y precio máximo (200)."""
+    """Devuelve los productos (200), opcionalmente filtrados.
+    Los filtros llegan como parámetros de consulta, p. ej.
+    GET /productos?categoria=bebidas&precio_max=100. Ambos son opcionales: valen
+    None si no se envían y entonces no se filtra por ese campo. Como precio_max
+    es float, FastAPI responde 422 si llega un valor no numérico (precio_max=abc).
+    """
+    # Se arma el filtro de MongoDB solo con los parámetros recibidos.
+    # {} (vacío) significa "sin condiciones": devuelve todos los productos.
     filtro = {}
     if categoria is not None:
-        filtro["categoria"] = categoria
+        filtro["categoria"] = categoria # igualdad exacta
     if precio_max is not None:
-        filtro["precio"] = {"$lte": precio_max}
-    
-    # {"_id": 0} es una proyección: excluye el campo id interno de MongoDB
+        filtro["precio"] = {"$lte": precio_max} # $lte = "less than or equal" (<=)
+    # {"_id": 0} es una proyección: excluye el campo _id interno de MongoDB
     # (un ObjectId que no se puede convertir a JSON directamente).
     return list(db.productos.find(filtro, {"_id": 0}))
 
 @app.get("/productos/{producto_id}")
-def obtener (producto_id: int):
-    """Devuelve un producto por su id (200) o 404 si no existe."""
+def obtener(producto_id: int):
+    """Devuelve un producto por su id (200) o 404 si no existe.
+    """
     p = db.productos.find_one({"id": producto_id}, {"_id": 0})
     if p is None:
         # Ventas interpreta este 404 como "el producto no existe"
@@ -71,14 +83,16 @@ def obtener (producto_id: int):
 
 @app.post("/productos", status_code=201)
 def crear(p: ProductoIn):
-    """Crea un producto con id nuevo. Responde 201 (Created) o 422 si es inválido."""
+    """Crea un producto con id nuevo. Responde 201 (Created) o 422 si es inválido.
+    """
     doc = {"id": siguiente_id(), **p.model_dump()}
-    db.productos.insert_one(dict(doc))
+    db.productos.insert_one(dict(doc)) # copia: insert_one agrega _id
     return doc
 
 @app.put("/productos/{producto_id}")
-def actualizar (producto_id: int, p: ProductoIn):
-    """Actualiza los campos de un producto (200) o responde 404 si no existe."""
+def actualizar(producto_id: int, p: ProductoIn):
+    """Actualiza los campos de un producto (200) o responde 404 si no existe.
+    """
     # $set reemplaza solo los campos indicados y conserva el resto del documento
     r = db.productos.update_one({"id": producto_id}, {"$set": p.model_dump()})
     # matched_count = documentos que coincidieron con el filtro
@@ -87,7 +101,8 @@ def actualizar (producto_id: int, p: ProductoIn):
     return {"id": producto_id, **p.model_dump()}
 
 @app.delete("/productos/{producto_id}", status_code=204)
-def eliminar (producto_id: int):
-    """Borra un producto. Responde 204 (sin contenido) o 404 si no existe."""
+def eliminar(producto_id: int):
+    """Borra un producto. Responde 204 (sin contenido) o 404 si no existe.
+    """
     if db.productos.delete_one({"id": producto_id}).deleted_count == 0:
         raise HTTPException(404, "Producto no encontrado")
