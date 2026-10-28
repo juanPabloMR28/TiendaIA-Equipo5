@@ -370,7 +370,8 @@ async function cargarPanel() {
   $("kpi-productos").textContent = productos.length;
   $("kpi-ventas").textContent = ventas.length;
   $("kpi-ingresos").textContent = dinero.format(ingresos);
-
+  $("kpi-ticket-promedio").textContent =
+    dinero.format(ventas.length > 0 ? ingresos / ventas.length : 0);
   // Ingresos por mes: el mes es el texto entre los caracteres 5 y 7 de AAAA-MM-DD
   const porMes = new Array(12).fill(0);
   for (const v of ventas) porMes[Number(v.fecha.slice(5, 7)) - 1] += v.total;
