@@ -65,7 +65,7 @@ services:
     build: {<<: *construir, args: {SERVICIO: ventas}}
     environment:
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
     depends_on: [redis, clientes, productos, rabbitmq]
 
   ia:
@@ -75,7 +75,7 @@ services:
       VENTAS_URL: http://ventas:8000
       MODELO_PATH: /modelos/modelo.joblib
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
     volumes: [modelos:/modelos]
     depends_on: [ventas, rabbitmq]
 
@@ -84,7 +84,7 @@ services:
     build: {<<: *construir, args: {SERVICIO: notificaciones}}
     environment: 
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
     depends_on: {rabbitmq: {condition: service_healthy}}
 
   seaweedfs:
@@ -123,7 +123,7 @@ services:
     environment:
       MODELO_PATH: /modelos/modelo.joblib
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RETARDO_MS: "200"
     volumes: [modelos:/modelos]
     depends_on: {rabbitmq: {condition: service_healthy}}
@@ -134,7 +134,7 @@ services:
     command: ["python", "listener.py"]
     environment: 
       REDIS_HOST: redis 
-      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       IA_URL: "http://ia:8000"
     depends_on: {rabbitmq: {condition: service_healthy}}
 
