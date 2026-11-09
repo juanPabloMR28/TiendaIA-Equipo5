@@ -82,9 +82,8 @@ services:
   notificaciones:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: notificaciones}}
-    environment: 
-      REDIS_HOST: redis
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+# Los hosts se llaman por el nombre del servicio dentro de la red de Compose
+    environment: {REDIS_HOST: redis, RABBITMQ_HOST: rabbitmq}
     depends_on: {rabbitmq: {condition: service_healthy}}
 
   seaweedfs:
