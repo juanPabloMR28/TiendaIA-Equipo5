@@ -129,6 +129,7 @@ if __name__ == "__main__":
                     f"1 fila={fila['latencia_1_fila_ms']} ms "
                     f"modelo={fila['modelo_mb']} MB "
                     f"proceso={fila['memoria_proceso_mb']} MB", flush=True)
+            
 # DictWriter escribe el encabezado con las llaves del diccionario y una fila
 # por medición: el CSV se abre directo en una hoja de cálculo.
     with open(args.salida, "w", newline="", encoding="utf-8") as f:
