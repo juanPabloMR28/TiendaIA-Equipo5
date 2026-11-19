@@ -1,5 +1,4 @@
-# Dependencias del API Gateway (Laboratorio 3). Docker las instala al construir la imagen.
-fastapi>=0.115 # framework web: define /health y la ruta /api/{svc}/...
-uvicorn[standard]>=0.30 # servidor ASGI que ejecuta la app FastAPI (CMD del Dockerfile)
-requests>=2.31 # cliente HTTP: reenvía cada petición al microservicio destino
-
+# API Gateway (Laboratorio 4: agrega la ruta "imagenes")
+fastapi>=0.115 # framework web: recibe /api/... y /health
+uvicorn[standard]>=0.30 # servidor ASGI que ejecuta la aplicación FastAPI
+requests>=2.31 # cliente HTTP para reenviar las peticiones a los microservicios
