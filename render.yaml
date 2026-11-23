@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: tiendaia-ia-equipoN
+    name: tiendaia-ia-equipo5
     runtime: python
     plan: free
     rootDir: ia_service
@@ -16,7 +16,7 @@ services:
         value: 3.12.7
 
   - type: web
-    name: tiendaia-web-equipoN
+    name: tiendaia-web-equipo5
     runtime: static
     rootDir: frontend
     buildCommand: echo "sin construccion"
