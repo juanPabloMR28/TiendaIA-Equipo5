@@ -18,7 +18,7 @@ services:
   - type: web
     name: tiendaia-web-equipo5
     runtime: static
-    rootDir: frontend
+    rootDir: fronted
     buildCommand: echo "sin construccion"
     staticPublishPath: .
     headers:
