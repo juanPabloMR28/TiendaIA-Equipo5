@@ -10,7 +10,7 @@ services:
     envVars:
       - key: VENTAS_URL
         sync: false
-      - key: MODELO_PATH
+      - key: /tmp/modelos/modelo.joblib
         value: /tmp/modelo.joblib
       - key: PYTHON_VERSION
         value: 3.12.7
