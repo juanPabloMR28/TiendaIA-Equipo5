@@ -1,3 +1,5 @@
+#creando el servicio para la aplicacion de IA
+
 apiVersion: v1
 kind: Service
 metadata:
