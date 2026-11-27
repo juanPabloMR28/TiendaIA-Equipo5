@@ -3,3 +3,4 @@ bench.env
 seaweed/s3.json
 bench.env
 *.joblib
+kubectl
