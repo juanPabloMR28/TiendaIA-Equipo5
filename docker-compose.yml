@@ -33,6 +33,16 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes: [redis_data:/data]
 
+  auth:
+    <<: *servicio
+    build: {<<: *construir, args: {SERVICIO: auth}}
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      AUTH_DB: /data/auth.db
+    volumes: [auth_data:/data]
+    ports: ["127.0.0.1:8001:8000"]   
+
   clientes:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: clientes}}
@@ -72,7 +82,9 @@ services:
     ports: ["8080:8000"]
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
-    depends_on: [clientes, productos, ventas, ia]
+      JWT_SECRET: ${JWT_SECRET:-}
+      API_KEY: ${API_KEY_GATEWAY:-}
+    depends_on: [clientes, productos, ventas, ia, auth]
 
   web:
     image: nginx:1.27-alpine
@@ -138,6 +150,7 @@ volumes:
   redis_data:
   modelos:
   seaweed_data:
+  auth_data:
 
 networks:
   default:
