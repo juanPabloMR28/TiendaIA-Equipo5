@@ -61,6 +61,7 @@ services:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: ventas}}
     environment:
+      API_KEY: ${API_KEY_VENTAS:-}
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
     depends_on: [redis, clientes, productos]
@@ -69,6 +70,7 @@ services:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: ia_service}}
     environment:
+      API_KEY: ${API_KEY_VENTAS:-}
       VENTAS_URL: http://ventas:8000
       MODELO_PATH: /modelos/modelo.joblib
       REDIS_HOST: redis
@@ -137,6 +139,7 @@ services:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: imagenes}}
     environment:
+      API_KEY: ${API_KEY_VENTAS:-}
       S3_ENDPOINT: http://seaweedfs:8333
       S3_PUBLIC_ENDPOINT: http://localhost:8333
       S3_BUCKET: tiendaia-imagenes

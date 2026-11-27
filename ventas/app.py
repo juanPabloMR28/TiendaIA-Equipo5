@@ -10,6 +10,9 @@ from datetime import date
 import redis
 import requests  # cliente HTTP para llamar a otros microservicios
 from fastapi import FastAPI, HTTPException
+from seguridad import requiere_servicio
+app = FastAPI(title="TiendaIA - Clientes",
+              dependencies=[Depends(requiere_servicio)])
 from pydantic import BaseModel, Field
 from eventos import publicar
 
@@ -25,6 +28,7 @@ app = FastAPI(title="TiendaIA - Ventas")
 
 TIEMPO_ESPERA = 5  # segundos: nunca esperar para siempre a otro servicio
 sesion = requests.Session()  # reutiliza conexiones TCP entre peticiones (más rápido)
+sesion.headers.update({"x-api-key": os.getenv("API_KEY", "")})
 
 # --- Modelo de entrada ---
 class VentaIn (BaseModel):
