@@ -25,6 +25,7 @@ app = FastAPI(title="TiendaIA - Ventas")
 
 TIEMPO_ESPERA = 5  # segundos: nunca esperar para siempre a otro servicio
 sesion = requests.Session()  # reutiliza conexiones TCP entre peticiones (más rápido)
+sesion.headers.update({"x-api-key": os.getenv("API_KEY", "")})
 
 # --- Modelo de entrada ---
 class VentaIn (BaseModel):
