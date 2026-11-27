@@ -1,4 +1,5 @@
-# API Gateway (Laboratorio 4: agrega la ruta "imagenes")
-fastapi>=0.115 # framework web: recibe /api/... y /health
-uvicorn[standard]>=0.30 # servidor ASGI que ejecuta la aplicación FastAPI
-requests>=2.31 # cliente HTTP para reenviar las peticiones a los microservicios
+# API Gateway (Laboratorio 6). Docker lo instala al construir la imagen.
+fastapi>=0.115              # framework web: recibe /api/... y documenta en /docs
+uvicorn[standard]>=0.30     # servidor ASGI que ejecuta la aplicación FastAPI
+requests>=2.31              # cliente HTTP: reenvía cada petición al microservicio
+pyjwt>=2.8                  # verifica la firma y la expiración del JWT ("import jwt")
